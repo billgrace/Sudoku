@@ -5,6 +5,7 @@
 #Backtracking Algorithm - Sudoku Solver - www.101computing.net/backtracking-algorithm-sudoku-solver/
 
 from PIL import Image, ImageDraw, ImageFont
+import random
 
 OutsideLineWidth = 10
 InsideLineWidth = 2
@@ -12,6 +13,8 @@ SubsquareLineWidth = 6
 OutsideMargin = 100
 CellSize = 100
 FontSize = 100
+
+SolutionAttemptCounter = 1
 
 #initialise empty 9 by 9 grids
 AnswerGrid = []
@@ -25,16 +28,16 @@ AnswerGrid.append([0, 0, 0, 0, 0, 0, 0, 0, 0])
 AnswerGrid.append([0, 0, 0, 0, 0, 0, 0, 0, 0])
 AnswerGrid.append([0, 0, 0, 0, 0, 0, 0, 0, 0])
 
-DisplayGrid = []
-DisplayGrid.append([0, 0, 0, 0, 0, 0, 0, 0, 0])
-DisplayGrid.append([0, 0, 0, 0, 0, 0, 0, 0, 0])
-DisplayGrid.append([0, 0, 0, 0, 0, 0, 0, 0, 0])
-DisplayGrid.append([0, 0, 0, 0, 0, 0, 0, 0, 0])
-DisplayGrid.append([0, 0, 0, 0, 0, 0, 0, 0, 0])
-DisplayGrid.append([0, 0, 0, 0, 0, 0, 0, 0, 0])
-DisplayGrid.append([0, 0, 0, 0, 0, 0, 0, 0, 0])
-DisplayGrid.append([0, 0, 0, 0, 0, 0, 0, 0, 0])
-DisplayGrid.append([0, 0, 0, 0, 0, 0, 0, 0, 0])
+PuzzleGrid = []
+PuzzleGrid.append([0, 0, 0, 0, 0, 0, 0, 0, 0])
+PuzzleGrid.append([0, 0, 0, 0, 0, 0, 0, 0, 0])
+PuzzleGrid.append([0, 0, 0, 0, 0, 0, 0, 0, 0])
+PuzzleGrid.append([0, 0, 0, 0, 0, 0, 0, 0, 0])
+PuzzleGrid.append([0, 0, 0, 0, 0, 0, 0, 0, 0])
+PuzzleGrid.append([0, 0, 0, 0, 0, 0, 0, 0, 0])
+PuzzleGrid.append([0, 0, 0, 0, 0, 0, 0, 0, 0])
+PuzzleGrid.append([0, 0, 0, 0, 0, 0, 0, 0, 0])
+PuzzleGrid.append([0, 0, 0, 0, 0, 0, 0, 0, 0])
 
 ############################### If a grid cell contains zero that's equivalent to a blank cell on paper
 
@@ -52,10 +55,9 @@ def GridIsFull( grid ):
 #	Find one zero cell and replace the zero with a legal 1-9 digit
 #	If that was the last zero (IsGridFull returns true), we're done
 #	Otherwise recursively call this same routine to go after the next zero cell
-def FillOneCell( grid ):
+def SolveGrid( grid ):
 	global SolutionAttemptCounter
-	# Find the next empty cell in the grid
-	# ... traverse all 81 cells in the grid
+	# Traverse all cells in the grid to find the next zero-filled cell
 	for i in range( 0, 81 ):
 		# break our traversing index into the corresponding row and column numbers
 		row = i // 9
@@ -109,12 +111,75 @@ def FillOneCell( grid ):
 								# The grid still has at least one zero cell so
 								# recursively call this routine to process the next zero-filled cell and
 								# exit
-								if FillOneCell( grid ):
+								if SolveGrid( grid ):
 									return True
 			# Break out of the "for i in range( 0, 81 )" loop since we've processed one zero-filled cell
 			break
 	# If we get to this spot in the code, our recursive search for a legal, full grid failed, so backtrack to try again
 	# APPARENTLY python returns False by default...
+	grid[ row ][ col ] = 0
+
+numberList = [ 1, 2, 3, 4, 5, 6, 7, 8, 9 ]
+
+# Fill a grid with digits according to the rules of sudoku (unique per column, row and sub-square)
+#  Find the next cell containing zero
+#  Try each digit until:
+#    1) a working digit is found
+#    2) we run out of digits to try
+#  If we run out of digits to try, return failure triggering backtrack by the calling instance
+#  If a working digit is found:
+#    1) if the grid is now filled, we're done - return success
+#    2) if the grid isn't full yet, recursively call this routine to process the next zero-filled cell
+def FillGrid( grid ):
+	global SolutionAttemptCounter
+	# Traverse all cells in the grid to find the next zero-filled cell
+	for i in range( 0, 81 ):
+		row = i // 9
+		col = i % 9
+		if grid[ row ][ col ] == 0:
+			# This is an empty cell, shuffle the digits and try each until one works or they all fail
+			random.shuffle( numberList )
+			for value in numberList:
+				# Is this digit already in this row?
+				if not( value in grid[ row ]):
+					# Is this digit already in this column?
+					if not value in ( grid[ 0 ][ col ], grid[ 1 ][ col ], grid[ 2 ][ col ], grid[ 3 ][ col ], grid[ 4 ][ col ], grid[ 5 ][ col ], grid[ 6 ][ col ], grid[ 7 ][ col ], grid[ 8 ][ col ]):
+						# Is this digit already in this sub-square?
+						# First get a copy of the sub-square in question
+						square = []
+						if row < 3:
+							if col < 3:
+								square = [ grid[ i ][ 0:3 ] for i in range( 0, 3)]
+							elif col < 6:
+								square = [ grid[ i ][ 3:6 ] for i in range( 0, 3)]
+							else:
+								square = [ grid[ i ][ 6:9 ] for i in range( 0, 3)]
+						elif row < 6:
+							if col < 3:
+								square = [ grid[ i ][ 0:3 ] for i in range( 3, 6)]
+							elif col < 6:
+								square = [ grid[ i ][ 3:6 ] for i in range( 3, 6)]
+							else:
+								square = [ grid[ i ][ 6:9 ] for i in range( 3, 6)]
+						else:
+							if col < 3:
+								square = [ grid[ i ][ 0:3 ] for i in range( 6, 9)]
+							elif col < 6:
+								square = [ grid[ i ][ 3:6 ] for i in range( 6, 9)]
+							else:
+								square = [ grid[ i ][ 6:9 ] for i in range( 6, 9)]
+						# Check the digit against the sub-square
+						if not value in ( square[ 0 ] + square[ 1 ] + square[ 2 ]):
+							# OK, this digit is legal for this cell so update the cell
+							grid[ row ][ col ] = value
+							if GridIsFull( grid ):
+								# The grid is full so that was the last cell to fill so we're done
+								return True
+							else:
+								# The grid still has at least one empty cell so recursively call this routine
+								if FillGrid( grid ):
+									return True
+			break
 	grid[ row ][ col ] = 0
 
 def DrawAndSave( grid, filename ):
@@ -373,8 +438,48 @@ def DrawAndSave( grid, filename ):
 
 
 def Main():
-	DrawAndSave( DisplayGrid, "DisplayTest.jpg" )
-	DrawAndSave( AnswerGrid, "AnswerTest.jpg" )
+	# Fill up a grid. That will be the "answer grid".
+	FillGrid( AnswerGrid )
+	# Make the "puzzle grid" by removing numbers from the answer grid
+	# A higher number of attempts should make a more difficult puzzle
+	# First copy the AnswerGrid to the PuzzleGrid
+	for row in range( 0, 9 ):
+		for col in range( 0, 9 ):
+			PuzzleGrid[ row ][ col ] = AnswerGrid[ row ][ col ]
+	# Then make blanks in PuzzleGrid and check each time to see if we've made enough blanks
+	RemainingAttemptsToRemove = 5
+	SolutionAttemptCounter = 1
+	while RemainingAttemptsToRemove > 0:
+		# Select a random cell that is not already empty
+		row = random.randint( 0, 8 )
+		col = random.randint( 0, 8 )
+		while PuzzleGrid[ row ][ col ] == 0:
+			# OK, this cell is already blank so try again
+			row = random.randint( 0, 8 )
+			col = random.randint( 0, 8 )
+		# This is now a non-blank cell so...
+		# 1) save the value in the cell in case we need to back out and replace it
+		backup = PuzzleGrid[ row ][ col ]
+		# 2) set the cell to empty
+		PuzzleGrid[ row ][ col ] = 0
+		# 3) Make a scratch copy of the grid
+		CopyGrid = []
+		for r in range( 0, 9 ):
+			CopyGrid.append([])
+			for c in range( 0, 9 ):
+				CopyGrid[ r ].append(PuzzleGrid[ r ][ c ])
+
+		# Count the number of solutions that this grid has
+		SolutionAttemptCounter = 0
+		SolveGrid( CopyGrid )
+		# If the number of solutions is different from 1 then we need to:
+		# - cancel the change
+		# - put back the value we zero'd out
+		# - make another attempt if allowed
+		RemainingAttemptsToRemove -= 1
+
+	DrawAndSave( PuzzleGrid, "PuzzleGrid.jpg" )
+	DrawAndSave( AnswerGrid, "AnswerGrid.jpg" )
 
 if __name__ == '__main__':
 	Main()
